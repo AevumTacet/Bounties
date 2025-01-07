@@ -1,0 +1,9 @@
+#comandos prohibidos durante el cautiverio:
+blocked-commands:
+  - tpa
+  - home
+  - back
+  - spawn
+  - warp
+# Límite máximo de días para la sentencia:
+max-sentence-days: 10 
