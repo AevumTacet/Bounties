@@ -180,16 +180,49 @@ public class CaptureListener implements Listener {
                 }
             }
         }
-            // Verificar si el jugador está en la lista de prohibición de comandos
+        // Verificar si el jugador está en la lista de prohibición de comandos
         if (commandBlockedPlayers.containsKey(victimId)) {
         // Liberar al jugador de la prohibición
         commandBlockedPlayers.remove(victimId);
         victim.sendMessage(ChatColor.GREEN + "Tu sentencia termina con tu muerte. Ahora puedes usar comandos nuevamente.");
         plugin.getLogger().info("El jugador " + victim.getName() + " ha sido liberado de su sentencia tras su muerte.");
         }
+
+        // Crear el Certificado tras remover el libro de captura
+        if (commandBlockedPlayers.containsKey(victimId)) {
+        if (killer != null) {
+            // Buscar y remover el libro de captura
+            ItemStack captureBook = findCaptureBook(killer);
+            if (captureBook != null) {
+                killer.getInventory().removeItem(captureBook); // Remover el libro de captura
+
+                // Crear el Certificado
+                ItemStack certificateBook = new ItemStack(Material.WRITTEN_BOOK);
+                BookMeta bookMeta = (BookMeta) certificateBook.getItemMeta();
+                if (bookMeta != null) {
+                    bookMeta.setTitle("Certificado");
+                    bookMeta.setAuthor("Confirmado");
+
+                    // Crear contenido del libro
+                    Location dungeonLocation = dungeonLocations.get(victimId);
+                    String pageContent = victim.getName() + " fue capturado por " + killer.getName() + ",\n"
+                            + "y ha sido encarcelado en las coordenadas" + dungeonLocation + "." ;
+
+                    bookMeta.addPage(pageContent);
+                    certificateBook.setItemMeta(bookMeta);
+
+                    // Añadir el Certificado al inventario del captor
+                    killer.getInventory().addItem(certificateBook);
+                    killer.sendMessage(ChatColor.GREEN + "Has recibido un Certificado en tu inventario.");
+                    }
+            } else {
+                 killer.sendMessage(ChatColor.RED + "No se encontró el libro de captura para eliminar.");
+                }
+            }
+
+        }
     }
 
-    @SuppressWarnings("deprecation")
     @EventHandler
     public void onPlayerRespawn(PlayerRespawnEvent event) {
         Player victim = event.getPlayer();
@@ -216,44 +249,6 @@ public class CaptureListener implements Listener {
             }
         }
     
-    // Crear el Certificado tras remover el libro de captura
-    if (plugin.getCapturedPlayers().containsKey(victimId)) {
-        Player captor = Bukkit.getPlayer(plugin.getKillers().get(victimId));
-        if (captor != null) {
-            // Buscar y remover el libro de captura
-            ItemStack captureBook = findCaptureBook(captor);
-            if (captureBook != null) {
-                captor.getInventory().removeItem(captureBook); // Remover el libro de captura
-
-                // Crear el Certificado
-                ItemStack certificateBook = new ItemStack(Material.WRITTEN_BOOK);
-                BookMeta bookMeta = (BookMeta) certificateBook.getItemMeta();
-                if (bookMeta != null) {
-                    bookMeta.setTitle("Certificado");
-                    bookMeta.setAuthor("Confirmado");
-
-                    // Crear contenido del libro
-                    Location respawnLocation = event.getRespawnLocation();
-                    String pageContent = victim.getName() + " fue capturado por " + captor.getName() + ",\n"
-                            + "y ha sido encarcelado en las coordenadas:\n"
-                            + "X: " + respawnLocation.getBlockX() + "\n"
-                            + "Y: " + respawnLocation.getBlockY() + "\n"
-                            + "Z: " + respawnLocation.getBlockZ() + ".";
-
-                    bookMeta.addPage(pageContent);
-                    certificateBook.setItemMeta(bookMeta);
-
-                    // Añadir el Certificado al inventario del captor
-                    captor.getInventory().addItem(certificateBook);
-                    captor.sendMessage(ChatColor.GREEN + "Has recibido un Certificado en tu inventario.");
-                    }
-            } else {
-                 captor.sendMessage(ChatColor.RED + "No se encontró el libro de captura para eliminar.");
-                }
-            }
-
-        }
-    
     }
 
     @SuppressWarnings("deprecation")
@@ -264,7 +259,7 @@ public class CaptureListener implements Listener {
     
         // Verificar si el objetivo es un jugador
         if (clickedEntity instanceof Player) {
-            Player targetPlayer = (Player) clickedEntity;
+            Player victim = (Player) clickedEntity;
     
             // Verificar si el objeto en la mano es un libro escrito con el título "gracia"
             ItemStack item = player.getInventory().getItemInMainHand();
@@ -281,20 +276,33 @@ public class CaptureListener implements Listener {
     
                     // Verificar que el nombre del jugador en el libro coincide con el objetivo
                     String content = String.join("\n", meta.getPages()).trim();
-                    if (!content.equalsIgnoreCase(targetPlayer.getName())) {
+                    if (!content.equalsIgnoreCase(victim.getName())) {
                         player.sendMessage(ChatColor.RED + "El nombre del jugador en el libro no coincide con el jugador cautivo.");
                         return;
                     }
     
-                    // Liberar al jugador
-                    UUID targetUUID = targetPlayer.getUniqueId();
-                    if (plugin.getCapturedPlayers().containsKey(targetUUID)) {
-                        plugin.getCapturedPlayers().remove(targetUUID);
-                        player.sendMessage(ChatColor.GREEN + "Has liberado al jugador " + targetPlayer.getName() + ".");
-                        targetPlayer.sendMessage(ChatColor.GREEN + "Has sido perdonado por la gracia de " + player.getName() + ".");
-                    } else {
-                        player.sendMessage(ChatColor.RED + "El jugador especificado no está capturado.");
+                    // Verificar si el jugador está bloqueado (en commandBlockedPlayers)
+                    UUID victimUUID = victim.getUniqueId();
+                    if (commandBlockedPlayers.containsKey(victimUUID)) {
+                        player.sendMessage(ChatColor.RED + "El jugador especificado no está bloqueado para comandos.");
+                        return;
                     }
+    
+                // Obtener el nombre del autor del libro
+                String authorName = meta.getAuthor();
+                if (authorName == null || authorName.isEmpty()) {
+                    authorName = "desconocido"; // Valor por defecto si no hay autor
+                }
+
+                // Liberar al jugador
+                if (commandBlockedPlayers.containsKey(victimUUID)) {
+                    commandBlockedPlayers.remove(victimUUID);
+                    player.sendMessage(ChatColor.GREEN + "Has liberado al jugador " + victim.getName() + ".");
+                    victim.sendMessage(ChatColor.GREEN + "Has sido perdonado por la gracia de " + authorName + ".");
+                } else {
+                    player.sendMessage(ChatColor.RED + "El jugador especificado no está capturado.");
+                }
+    
                     // Consumir el libro de perdón
                     player.getInventory().remove(item);
                     player.sendMessage(ChatColor.YELLOW + "El libro de perdón ha sido consumido tras liberar al cautivo.");
@@ -302,6 +310,7 @@ public class CaptureListener implements Listener {
             }
         }
     }
+
     
 
     // Método auxiliar para buscar el libro de captura
