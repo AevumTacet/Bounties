@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
@@ -20,6 +21,7 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -249,6 +251,31 @@ public class CaptureListener implements Listener {
             }
         }
     
+    }
+
+    @SuppressWarnings("deprecation")
+    @EventHandler
+    public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
+        Player player = event.getPlayer();
+        UUID victimId = player.getUniqueId();
+
+        // Verificar si el jugador está en la lista de jugadores bloqueados
+        if (commandBlockedPlayers.containsKey(victimId)) {
+            long expiryTime = commandBlockedPlayers.get(victimId);
+            if (System.currentTimeMillis() < expiryTime) {
+                String command = event.getMessage().split(" ")[0].substring(1).toLowerCase(); // Obtener el comando sin "/"
+                List<String> blockedCommands = plugin.getBlockedCommands();
+
+                // Verificar si el comando está bloqueado
+                if (blockedCommands.contains(command)) {
+                    player.sendMessage(ChatColor.RED + "No puedes usar este comando mientras estás cautivo.");
+                    event.setCancelled(true); // Cancelar el comando
+                }
+            } else {
+                // Si el tiempo de bloqueo expiró, eliminar al jugador de la lista
+                commandBlockedPlayers.remove(victimId);
+            }
+        }
     }
 
     @SuppressWarnings("deprecation")
