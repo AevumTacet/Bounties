@@ -1,0 +1,15 @@
+max-sentence-days: 10
+restricted-commands:
+  - tp
+  - back
+  - tpa
+messages:
+  bounty-activated: "&aOrden activada! Calabozo en: %x%, %y%, %z%"
+  captive-notify: "&cHas sido capturado! Quedan %dias% días."
+  sentence-ended-death: "<red>¡Condena finalizada por muerte!"
+  invalid-calabozo: "<red>Error: Calabozo no existe. ¡Eres libre!"
+  command-blocked: "<red>¡No puedes usar <bold>%command%</bold> durante tu condena!"
+  indulto-validated: "<gold>¡Indulto validado correctamente!"
+  bounty-invalid-format: "<red>Formato incorrecto: Usa 'Jugador, Días'"
+  sentence-too-long: "<red>¡La condena máxima es de %max% días!"
+  sentence-time-update: "<gray>Tiempo restante: %days% días"

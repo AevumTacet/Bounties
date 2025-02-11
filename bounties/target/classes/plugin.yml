@@ -1,0 +1,8 @@
+name: Bounties
+version: 1.0
+main: bounties.Main
+api-version: 1.19
+commands:
+  bounties:
+    description: Comando principal del plugin
+    usage: /bounties reload
